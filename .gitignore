@@ -1,0 +1,6 @@
+.*.swp
+**/venv/**
+*.pyc
+*.log
+**/__pycache__/**
+**/*.*egg-info/**
