@@ -73,7 +73,9 @@ def report(engine):
 def next(engine):
     with connection(engine) as conn:
         last = get_last(conn)
-    next_ = config['PRAYER_NAMES'][last+1]
+    # the prayers in the database are ranged 1 to 5. While tuple index access
+    # is from 0. So we we don't have to increment the index here.
+    next_ = config['PRAYER_NAMES'][last]
     click.echo(next_)
 
 
