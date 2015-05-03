@@ -2,6 +2,7 @@ from __future__ import division
 
 import os
 import datetime
+import contextlib
 
 import click
 import sqlalchemy as sa
@@ -27,12 +28,11 @@ def cli(ctx):
     db_name = '.qada.sqlite'
     db = 'sqlite:///' + os.path.join(home, db_name)
     engine = sa.create_engine(db)
+    ctx.obj = engine
 
     if not os.path.exists(os.path.join(home, db_name)):
+        db = 'sqlite:///' + os.path.join(home, db_name)
         metadata.create_all(engine)
-
-    conn = engine.connect()
-    ctx.obj = conn
 
 
 @cli.command()
@@ -40,31 +40,39 @@ def cli(ctx):
               default=config.get('QADA_PER_DAY', 2),
               help='Number of prayers made up')
 @click.pass_obj
-def add(conn, count):
-    last = get_last(conn)
-    prayers = [(i+1+last) % 5 or 5 for i in xrange(count)]
-    click.echo('Will insert %s.' % ', '.join(get_prayer_names(prayers)))
-    if click.confirm('Is this correct?'):
-        values = [{'prayer': p, 'date': datetime.datetime.utcnow()}
-                  for p in prayers]
-        conn.execute(prayer.insert(), values)
-    conn.close()
+def add(engine, count):
+    with connection(engine) as conn:
+        last = get_last(conn)
+        prayers = [(i+1+last) % 5 or 5 for i in xrange(count)]
+        click.echo('Will insert %s.' % ', '.join(get_prayer_names(prayers)))
+        if click.confirm('Is this correct?'):
+            values = [{'prayer': p, 'date': datetime.datetime.utcnow()}
+                      for p in prayers]
+            conn.execute(prayer.insert(), values)
 
 
 @cli.command()
 @click.pass_obj
-def report(conn):
-    stmt = sa.sql.select([sa.func.count(prayer.c.id).label('num_prayers')])
-    result = conn.execute(stmt).first()[0]
+def report(engine):
+    with connection(engine) as conn:
+        stmt = sa.sql.select([sa.func.count(prayer.c.id).label('num_prayers')])
+        result = conn.execute(stmt).first()[0]
+
     days = result // 5
     remaining = result % 5
-    output = 'You have made up:\n'
+    output = 'You have made up: '
     if days:
-        output += '%s days\n' % days
+        output += '%s days, ' % days
     if remaining:
-        output += '%d prayers' % remaining
+        output += '%d prayers.' % remaining
     click.echo(output)
-    conn.close()
+@contextlib.contextmanager
+def connection(engine):
+    conn = engine.connect()
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def get_last(conn):
