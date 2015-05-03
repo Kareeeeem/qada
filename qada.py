@@ -66,6 +66,17 @@ def report(engine):
     if remaining:
         output += '%d prayers.' % remaining
     click.echo(output)
+
+
+@cli.command()
+@click.pass_obj
+def next(engine):
+    with connection(engine) as conn:
+        last = get_last(conn)
+    next_ = config['PRAYER_NAMES'][last+1]
+    click.echo(next_)
+
+
 @contextlib.contextmanager
 def connection(engine):
     conn = engine.connect()
