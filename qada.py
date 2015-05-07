@@ -75,7 +75,7 @@ def next(engine):
         last = get_last(conn)
     # the prayers in the database are ranged 1 to 5. While tuple index access
     # is from 0. So we we don't have to increment the index here.
-    next_ = config['PRAYER_NAMES'][last]
+    next_ = config['PRAYER_NAMES'][last % 5]
     click.echo(next_)
 
 
@@ -103,4 +103,5 @@ def get_last(conn):
 
 
 def get_prayer_names(prayers):
+    '''Maps prayer integer identifiers to their names'''
     return map(lambda i: config['PRAYER_NAMES'][i-1], prayers)
