@@ -6,6 +6,7 @@ setup(
     py_modules=['qada'],
     install_requires=[
         'Click',
+        'sqlalchemy',
     ],
     entry_points='''
     [console_scripts]
