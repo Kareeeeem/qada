@@ -56,11 +56,9 @@ def add(engine, count):
     with connection(engine) as conn:
         last = get_last(conn)
         prayers = [(i + 1 + last) % 5 or 5 for i in xrange(int(count))]
-        prayer_names = config.get(
-            'qada', 'prayer_names',
-            'subh, dhuhr, `asr, maghrib, ishaa').split(',')
-        mapped_prayer_names = map(lambda i: prayer_names[i-1], prayers)
-        click.echo('Will insert %s.' % ', '.join(mapped_prayer_names))
+        prayer_names = map(lambda i: name_prayers(config)[i-1], prayers)
+
+        click.echo('Will insert %s.' % ', '.join(prayer_names))
         if click.confirm('Is this correct?'):
             values = [{'prayer': p} for p in prayers]
             conn.execute(prayer.insert(), values)
@@ -88,8 +86,8 @@ def report(engine):
 def next(engine):
     with connection(engine) as conn:
         last = get_last(conn)
-    prayer_names = config.get('qada', 'prayer_names',
-                              'subh, dhuhr, `asr, maghrib, ishaa').split(',')
+
+    prayer_names = name_prayers(config)
     next_ = prayer_names[last % 5]
     click.echo(next_)
 
@@ -104,10 +102,16 @@ def connection(engine):
 
 
 def get_last(conn):
-    stmt = sa.sql.select([prayer.c.prayer]).order_by(prayer.c.date.desc(),
-                                                     prayer.c.prayer)
+    stmt = sa.sql.select([prayer.c.prayer]).\
+        order_by(prayer.c.date.desc(), prayer.c.prayer)
     result = conn.execute(stmt).first()
     try:
         return result[0]
     except TypeError:
         return 0
+
+
+def name_prayers(config):
+    default_names = 'subh, dhuhr, `asr, maghrib, ishaa'
+    prayer_names = config.get('qada', 'prayer_names', default_names)
+    return prayer_names.split(',')
